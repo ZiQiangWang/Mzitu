@@ -3,6 +3,7 @@
 # @Author  : wangziqiang
 
 import requests
+from requests.exceptions import ConnectionError,InvalidURL,ReadTimeout
 import time
 import random
 import sys
@@ -53,14 +54,16 @@ class wrequest(object):
             "122.225.49.142:8080"
             ]
 
-    def request_get(self, url, timeout=3, proxy=None, retry=6):
+    def request_get(self, url, timeout=5, proxy=None, retry=6):
         UA = random.choice(self.user_agent_list)
         headers = {'User-Agent':UA}
         if not proxy:
             try:
                 return requests.get(url,headers = headers,timeout=timeout)
-            except Exception as e:
-                print u"错误信息：" , e.message
+            except InvalidURL as e:
+                print u'访问链接'+url+'错误。\n信息：',e.message
+            except (ConnectionError,ReadTimeout) as e:
+                print u'访问链接'+url+'错误。\n信息：',e.message
                 if retry>0:
                     print u"访问出错，10s后再次尝试。"+u"剩余尝试次数："+str(retry)+"。"
                     time.sleep(10)
@@ -88,6 +91,6 @@ class wrequest(object):
                     print u"代理不可用！取消代理！"
                     return self.request_get(url,3)
 
-wrequest_get = wrequest() ##实例化
+wrequest_get = wrequest()
 
 
