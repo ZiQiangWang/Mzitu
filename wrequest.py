@@ -53,7 +53,7 @@ class wrequest(object):
             "122.225.49.142:8080"
             ]
 
-    def request_get(self, url, timeout=10, proxy=None, retry=6):
+    def request_get(self, url, timeout=3, proxy=None, retry=6):
         UA = random.choice(self.user_agent_list)
         headers = {'User-Agent':UA}
         if not proxy:
@@ -64,11 +64,11 @@ class wrequest(object):
                 if retry>0:
                     print u"访问出错，10s后再次尝试。"+u"剩余尝试次数："+str(retry)+"。"
                     time.sleep(10)
-                    return self.request_get(url,headers,timeout,retry-1)
+                    return self.request_get(url,timeout,retry=retry-1)
                 else:
                     proxy = {'http': random.choice(self.proxy_list)}
                     print u"开始使用代理", str(proxy)
-                    timeout.sleep(10)
+                    time.sleep(10)
                     return self.request_get(url,timeout,proxy)
         else:
             try:

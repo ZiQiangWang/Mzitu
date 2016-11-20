@@ -2,13 +2,13 @@
 # @Date    : 2016-11-19 15:12:36
 # @Author  : wangziqiang
 
-import requests
 from bs4 import BeautifulSoup
 import os
 import sys
 import re
+from pymongo import MongoClient
 from wrequest import wrequest_get
-
+import datetime
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -19,7 +19,9 @@ PATH_IMAGE = 'images'
 class Mzitu(object):
     """用来抓取网站www.mzitu.com的图片"""
     def __init__(self):
-        pass
+        client = MongoClient()
+        db = client['spider']
+        self.meizitu_collection = db['meizitu']
 
     def save(self,img_url, path):
         """传入图片的url，保存到对应位置,path是图片保存的路径"""
@@ -27,24 +29,6 @@ class Mzitu(object):
         with open(path+'/'+img_url[-9:],'wb') as f:
             f.write(img)
             f.close()
-
-    # def request_get(self, url, args='text'):
-    #     """根据url返回网站内容
-    #         args可以填text或content
-    #     """
-    #     UA = random.choice(self.user_agent_list)
-    #     headers = {'User-Agent':UA}
-    #     rep = requests.get(url,headers = headers)
-    #     if rep.status_code != 200:
-    #         print  url+'访问失败'
-    #         return None
-
-    #     if args == 'text':
-    #         return rep.text
-    #     elif args == 'content':
-    #         return rep.content
-    #     else:
-    #         return None
 
     def validate_name(self, name):
         """windows下文件夹非法命名校验"""
@@ -82,22 +66,37 @@ class Mzitu(object):
                             os.mkdir(page_path)
 
                     href = mp['href']
-                    print u"开始获取《"+title+"》"
-                    self.get_pages(href,page_path)
+                    if self.meizitu_collection.find_one({'主题页面': href}):
+                        print u"已经爬过这个页面："+title
+                    else:
+                        print u"开始获取："+title
+                        self.get_pages(href,title,page_path)
 
-    def get_pages(self,url,path):
+    def get_pages(self,url,title,path):
         """获取每一个专辑的图片"""
         page  = wrequest_get.request_get(url).text
         s = BeautifulSoup(page, 'html.parser')
         max_index = s.find('div',class_='pagenavi').find_all('span')[6].text
 
+        img_urls = []
         for x in xrange(1,int(max_index)+1):
             page_url = url+'/'+str(x)
             image_html = wrequest_get.request_get(page_url).text
             img_soup = BeautifulSoup(image_html, 'html.parser')
             img_url = img_soup.find('div', class_='main-image').find('img')['src']
-
+            img_urls.append(img_url)
             self.save(img_url,path)
+
+        post = {
+            '标题': title,
+            '主题页面': url,
+            '图片地址': img_urls,
+            '获取时间': datetime.datetime.now()
+        }
+        self.meizitu_collection.save(post)
+        print u"保存数据成功"
+
+
 
 
 m = Mzitu()
